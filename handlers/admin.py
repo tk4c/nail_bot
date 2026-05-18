@@ -10,20 +10,20 @@
 import re
 from datetime import date
 
-from aiogram import Router, F, Bot
-from aiogram.types import (
-    Message,
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-)
+from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 
 import database as db
+from calendar_kb import generate_calendar, get_next_month, get_prev_month
 from config import ADMIN_ID, SERVICES
 from states import AdminFSM
-from calendar_kb import generate_calendar, get_prev_month, get_next_month
 
 router = Router()
 
@@ -31,6 +31,7 @@ router = Router()
 # ============================================================
 # Проверка прав администратора (фильтр)
 # ============================================================
+
 
 def is_admin(user_id: int) -> bool:
     """Проверяет, является ли пользователь администратором."""
@@ -41,15 +42,38 @@ def is_admin(user_id: int) -> bool:
 # Админ-меню
 # ============================================================
 
+
 def admin_menu_kb() -> InlineKeyboardMarkup:
     """Клавиатура админ-панели."""
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📅 Добавить рабочий день", callback_data="adm_add_day")],
-        [InlineKeyboardButton(text="🕐 Управление слотами", callback_data="adm_manage_slots")],
-        [InlineKeyboardButton(text="📋 Просмотр расписания", callback_data="adm_view_schedule")],
-        [InlineKeyboardButton(text="🚫 Закрыть день", callback_data="adm_close_day")],
-        [InlineKeyboardButton(text="❌ Отмена записи клиента", callback_data="adm_cancel_booking")],
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📅 Добавить рабочий день", callback_data="adm_add_day"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🕐 Управление слотами", callback_data="adm_manage_slots"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📋 Просмотр расписания", callback_data="adm_view_schedule"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🚫 Закрыть день", callback_data="adm_close_day"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Отмена записи клиента", callback_data="adm_cancel_booking"
+                )
+            ],
+        ]
+    )
 
 
 ADMIN_WELCOME = "🔧 <b>Админ-панель</b>\n\nВыберите действие:"
@@ -82,6 +106,7 @@ async def cb_admin_menu(callback: CallbackQuery, state: FSMContext):
 # Добавление рабочего дня
 # ============================================================
 
+
 @router.callback_query(F.data == "adm_add_day")
 async def cb_adm_add_day(callback: CallbackQuery, state: FSMContext):
     """Показываем админский календарь для добавления рабочего дня."""
@@ -104,6 +129,7 @@ async def cb_adm_add_day(callback: CallbackQuery, state: FSMContext):
 # ============================================================
 # Навигация по админскому календарю
 # ============================================================
+
 
 @router.callback_query(F.data.startswith("adm_prev_"))
 async def cb_adm_prev(callback: CallbackQuery):
@@ -139,6 +165,7 @@ async def cb_adm_next(callback: CallbackQuery):
 # Обработка выбора даты в админском календаре
 # ============================================================
 
+
 @router.callback_query(F.data.startswith("adm_day_"))
 async def cb_adm_day(callback: CallbackQuery, state: FSMContext):
     """Админ выбрал дату — определяем действие из FSM-контекста."""
@@ -156,10 +183,21 @@ async def cb_adm_day(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
             f"✅ <b>{day_date}</b> добавлен как рабочий день.\n\n"
             "Теперь добавьте временные слоты через «Управление слотами».",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🕐 Управление слотами", callback_data="adm_manage_slots")],
-                [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
-            ]),
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🕐 Управление слотами",
+                            callback_data="adm_manage_slots",
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 Админ-меню", callback_data="adm_menu"
+                        )
+                    ],
+                ]
+            ),
             parse_mode="HTML",
         )
         await state.clear()
@@ -175,15 +213,17 @@ async def cb_adm_day(callback: CallbackQuery, state: FSMContext):
 
     elif action == "close_day":
         # Подтверждение закрытия дня
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="✅ Да, закрыть",
-                    callback_data=f"adm_confirm_close_{day_date}",
-                ),
-                InlineKeyboardButton(text="🔙 Отмена", callback_data="adm_menu"),
-            ],
-        ])
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="✅ Да, закрыть",
+                        callback_data=f"adm_confirm_close_{day_date}",
+                    ),
+                    InlineKeyboardButton(text="🔙 Отмена", callback_data="adm_menu"),
+                ],
+            ]
+        )
         await callback.message.edit_text(
             f"⚠️ <b>Закрыть день {day_date}?</b>\n\n"
             "Все слоты и записи на эту дату будут удалены!",
@@ -201,6 +241,7 @@ async def cb_adm_day(callback: CallbackQuery, state: FSMContext):
 # ============================================================
 # Управление слотами
 # ============================================================
+
 
 @router.callback_query(F.data == "adm_manage_slots")
 async def cb_adm_manage_slots(callback: CallbackQuery, state: FSMContext):
@@ -242,27 +283,39 @@ async def show_slot_management(callback: CallbackQuery, day_date: str):
                 status = "🟢 Свободно"
             else:
                 svc = _service_name(s.get("service_id"))
-                status = f"🔴 {s['client_name']} ({svc})" if svc else f"🔴 {s['client_name']}"
+                status = (
+                    f"🔴 {s['client_name']} ({svc})"
+                    if svc
+                    else f"🔴 {s['client_name']}"
+                )
             text += f"▸ {s['slot_time']} — {status}\n"
             # Кнопка удаления слота
-            buttons.append([
-                InlineKeyboardButton(
-                    text=f"🗑 Удалить {s['slot_time']}",
-                    callback_data=f"adm_del_slot_{day_date}_{s['slot_time']}",
-                )
-            ])
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        text=f"🗑 Удалить {s['slot_time']}",
+                        callback_data=f"adm_del_slot_{day_date}_{s['slot_time']}",
+                    )
+                ]
+            )
     else:
         text += "<i>Слотов пока нет</i>\n"
 
-    buttons.append([
-        InlineKeyboardButton(text="➕ Добавить слот", callback_data=f"adm_add_slot_{day_date}")
-    ])
-    buttons.append([
-        InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")
-    ])
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                text="➕ Добавить слот", callback_data=f"adm_add_slot_{day_date}"
+            )
+        ]
+    )
+    buttons.append(
+        [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")]
+    )
 
     await callback.message.edit_text(
-        text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode="HTML"
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+        parse_mode="HTML",
     )
 
 
@@ -334,10 +387,16 @@ async def msg_add_slot_time(message: Message, state: FSMContext):
     if errors:
         response += f"⚠️ Неверный формат: {', '.join(errors)}\n"
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Ещё слот", callback_data=f"adm_add_slot_{day_date}")],
-        [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
-    ])
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="➕ Ещё слот", callback_data=f"adm_add_slot_{day_date}"
+                )
+            ],
+            [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
+        ]
+    )
 
     await message.answer(response, reply_markup=kb, parse_mode="HTML")
     await state.clear()
@@ -366,6 +425,7 @@ async def cb_adm_del_slot(callback: CallbackQuery, state: FSMContext):
 # ============================================================
 # Просмотр расписания
 # ============================================================
+
 
 @router.callback_query(F.data == "adm_view_schedule")
 async def cb_adm_view_schedule(callback: CallbackQuery, state: FSMContext):
@@ -406,9 +466,11 @@ async def show_schedule(callback: CallbackQuery, day_date: str):
             else:
                 text += f"🟢 <b>{s['slot_time']}</b> — свободно\n"
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
-    ])
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
+        ]
+    )
 
     await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
 
@@ -416,6 +478,7 @@ async def show_schedule(callback: CallbackQuery, day_date: str):
 # ============================================================
 # Закрытие дня
 # ============================================================
+
 
 @router.callback_query(F.data == "adm_close_day")
 async def cb_adm_close_day(callback: CallbackQuery, state: FSMContext):
@@ -467,6 +530,7 @@ async def cb_adm_confirm_close(callback: CallbackQuery, state: FSMContext, bot: 
         # Удаляем напоминания
         try:
             from scheduler import remove_reminder
+
             remove_reminder(b["id"])
         except Exception:
             pass
@@ -475,9 +539,11 @@ async def cb_adm_confirm_close(callback: CallbackQuery, state: FSMContext, bot: 
         f"✅ <b>День {day_date} закрыт.</b>\n\n"
         f"Удалено записей: {len(bookings)}\n"
         "Клиенты уведомлены.",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
-        ]),
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
+            ]
+        ),
         parse_mode="HTML",
     )
     await state.clear()
@@ -487,6 +553,7 @@ async def cb_adm_confirm_close(callback: CallbackQuery, state: FSMContext, bot: 
 # ============================================================
 # Отмена записи клиента (админом)
 # ============================================================
+
 
 @router.callback_query(F.data == "adm_cancel_booking")
 async def cb_adm_cancel_booking(callback: CallbackQuery, state: FSMContext):
@@ -514,9 +581,15 @@ async def show_bookings_for_cancel(callback: CallbackQuery, day_date: str):
     if not bookings:
         await callback.message.edit_text(
             f"ℹ️ На <b>{day_date}</b> нет записей.",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
-            ]),
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="🔙 Админ-меню", callback_data="adm_menu"
+                        )
+                    ],
+                ]
+            ),
             parse_mode="HTML",
         )
         return
@@ -534,19 +607,23 @@ async def show_bookings_for_cancel(callback: CallbackQuery, day_date: str):
         btn_text = f"❌ {b['slot_time']} {b['client_name']}"
         if svc:
             btn_text += f" ({svc})"
-        buttons.append([
-            InlineKeyboardButton(
-                text=btn_text,
-                callback_data=f"adm_do_cancel_{b['id']}",
-            )
-        ])
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=btn_text,
+                    callback_data=f"adm_do_cancel_{b['id']}",
+                )
+            ]
+        )
 
-    buttons.append([
-        InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")
-    ])
+    buttons.append(
+        [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")]
+    )
 
     await callback.message.edit_text(
-        text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons), parse_mode="HTML"
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+        parse_mode="HTML",
     )
 
 
@@ -582,6 +659,7 @@ async def cb_adm_do_cancel(callback: CallbackQuery, state: FSMContext, bot: Bot)
     # Удаляем напоминание
     try:
         from scheduler import remove_reminder
+
         remove_reminder(booking_id)
     except Exception:
         pass
@@ -591,9 +669,11 @@ async def cb_adm_do_cancel(callback: CallbackQuery, state: FSMContext, bot: Bot)
         f"✅ Запись <b>{cancelled['client_name']}</b>{svc_admin} "
         f"на {cancelled['day_date']} {cancelled['slot_time']} отменена.\n"
         "Клиент уведомлён.",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
-        ]),
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Админ-меню", callback_data="adm_menu")],
+            ]
+        ),
         parse_mode="HTML",
     )
     await state.clear()

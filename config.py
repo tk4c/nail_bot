@@ -1,31 +1,34 @@
 # ============================================================
 # config.py — Конфигурация бота
 # ============================================================
+import os
+
+from decouple import config
 
 # Токен бота (получить у @BotFather)
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+BOT_TOKEN = config("BOT_TOKEN")
 
 # ID администратора (узнать через @userinfobot)
-ADMIN_ID = 123456789
+ADMIN_ID = config("ADMIN_ID", cast=int)
 
 # ID канала для публикации расписания (формат: -100xxxxxxxxxx)
-SCHEDULE_CHANNEL_ID = -1001234567890
+SCHEDULE_CHANNEL_ID = config("SCHEDULE_CHANNEL_ID", cast=int)
 
 # ---- Проверка подписки на канал ----
 # ID канала для проверки подписки (формат: -100xxxxxxxxxx)
-CHANNEL_ID = -1001234567890
+CHANNEL_ID = config("CHANNEL_ID", cast=int)
 
 # Ссылка на канал (для кнопки «Подписаться»)
-CHANNEL_LINK = "https://t.me/your_channel"
+CHANNEL_LINK = config("CHANNEL_LINK")
 
 # ---- База данных ----
-DATABASE_PATH = "nail_bot.db"
+DATABASE_PATH = config("DATABASE_PATH", default="nail_bot.db")
 
 # ---- Справочник услуг (id, название, цена) ----
 # Используется для выбора при записи и в прайс-листе
 SERVICES = {
-    "french":  {"name": "Френч",  "price": 1000},
-    "square":  {"name": "Квадрат", "price": 500},
+    "french": {"name": "Френч", "price": 1000},
+    "square": {"name": "Квадрат", "price": 500},
 }
 
 
